@@ -10,7 +10,7 @@ Outputs:
       - Arn
   S3BucketName:
     Description: The name of the S3 root bucket.
-    Value: !Ref assetsS3Bucket
+    Value: !Ref rootS3Bucket
 
 Parameters:
   IAMRole:
@@ -31,10 +31,10 @@ Parameters:
     Default: 'databricks-root'
 
 Resources:
-  assetsS3Bucket:
+  rootS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Join [ "-", [ !Ref BucketName, !Select [ 0, !Split [ "-", !Select [ 2, !Split [ "/", !Ref "AWS::StackId" ] ] ] ] ] ]
+      BucketName: !Join [ "-", [ !Ref BucketName, !Ref "AWS::AccountId" ] ]
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -61,9 +61,9 @@ Resources:
               - 's3:ListBucket'
               - 's3:GetBucketLocation'
             Resource:
-              - !Sub 'arn:aws:s3:::${assetsS3Bucket}/*'
-              - !Sub 'arn:aws:s3:::${assetsS3Bucket}'
-      Bucket: !Ref assetsS3Bucket
+              - !Sub 'arn:aws:s3:::${rootS3Bucket}/*'
+              - !Sub 'arn:aws:s3:::${rootS3Bucket}'
+      Bucket: !Ref rootS3Bucket
   accessRole:
     Type: 'AWS::IAM::Role'
     Properties:
