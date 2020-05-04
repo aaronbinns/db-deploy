@@ -17,7 +17,7 @@
                 "Ref": "rootS3Bucket"
             }
         },
-        "DataBucketsAccessInstanceProfileARN": {
+        "AccessDataBucketsInstanceProfileARN": {
             "Description": "Instance profile ARN to attach to Databricks cluster so it can access your S3 data buckets",
             "Value": {
 	      "Fn::GetAtt": [
