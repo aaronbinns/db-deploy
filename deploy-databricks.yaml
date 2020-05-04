@@ -8,33 +8,21 @@ Outputs:
     Value: !GetAtt 
       - accessRole
       - Arn
-  S3BucketName:
+  RootBucketName:
     Description: The name of the S3 root bucket.
     Value: !Ref rootS3Bucket
 
 Parameters:
-  IAMRole:
-    Description: The name of the cross account role. Only Alphnumeric characters with a minimum length of 3.
-    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
-    MinLength: '3'
-    Type: String
-    Default: 'databricks-control-plane'
   ExternalID:
-    Description: The External ID that will be required to assume the role.
+    Description: The External ID from the Databricks "AWS Account Settings" page
     MinLength: '1'
     Type: String
-  BucketName:
-    Description: The name of the S3 root bucket which can include numbers, lowercase and uppercase letters as well as hyphens (-). It cannot start or end with a hyphen (-).
-    AllowedPattern: '^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$'
-    MinLength: '3'
-    Type: String
-    Default: 'databricks-root'
 
 Resources:
   rootS3Bucket:
     Type: AWS::S3::Bucket
     Properties:
-      BucketName: !Join [ "-", [ !Ref BucketName, !Ref "AWS::AccountId" ] ]
+      BucketName: !Sub "databricks-root-${AWS::AccountId}"
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -67,7 +55,7 @@ Resources:
   accessRole:
     Type: 'AWS::IAM::Role'
     Properties:
-      RoleName: !Ref IAMRole
+      RoleName: "databricks-control-plane"
       AssumeRolePolicyDocument:
         Statement:
           - Action: 'sts:AssumeRole'
