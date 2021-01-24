@@ -1133,18 +1133,24 @@
                 ]
             }
         },
+	
         "RootBucketName": {
             "Description": "The name of the S3 root bucket",
             "Value": {
                 "Ref": "rootS3Bucket"
             }
         },
-        "VPCId": {
-            "Description": "The ID of the VPC",
-            "Value": {
-                "Ref": "VPC"
-            }
-        },
+	
+        "VPCId"          : { "Description": "VPC ID"           , "Value": { "Ref": "VPC"           }                             },
+        "SubnetAId"      : { "Description": "Subnet A ID"      , "Value": { "Ref": "SubnetA"       }                             },
+        "SubnetBId"      : { "Description": "Subnet B ID"      , "Value": { "Ref": "SubnetB"       }                             },
+        "SubnetCId"      : { "Description": "Subnet C ID"      , "Value": { "Ref": "SubnetC"       }, "Condition": "Has3Subnets" },
+        "SubnetDId"      : { "Description": "Subnet D ID"      , "Value": { "Ref": "SubnetD"       }, "Condition": "Has4Subnets" },
+        "SubnetEId"      : { "Description": "Subnet E ID"      , "Value": { "Ref": "SubnetE"       }, "Condition": "Has5Subnets" },
+        "SubnetFId"      : { "Description": "Subnet F ID"      , "Value": { "Ref": "SubnetF"       }, "Condition": "Has6Subnets" },
+
+	"SecurityGroupId": { "Description": "Security Group ID", "Value": { "Ref": "SecurityGroup" }                             },
+	
         "AccessDataBucketsInstanceProfileARN": {
             "Description": "Instance profile ARN to attach to Databricks cluster so it can access your S3 data buckets",
             "Value": {
