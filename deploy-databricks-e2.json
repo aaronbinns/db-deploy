@@ -2,1139 +2,1157 @@
     "AWSTemplateFormatVersion": "2010-09-09",
     "Description": "This template creates all AWS resources needed for a Databricks E2 workspace.",
     "Parameters": {
-	"ExternalID": {
-	    "Description": "Your Databricks E2 account ID",
-	    "MinLength": "1",
-	    "Type": "String"
-	},
-	"basename": {
-	    "Description": "Base name for all resources, e.g. \"databricks\"",
-	    "Type": "String",
-	    "MinLength": 1,
-	    "Default": "databricks"
-	}
+        "ExternalID": {
+            "Description": "Your Databricks E2 account ID",
+            "MinLength": "1",
+            "Type": "String"
+        }
     },
     "Conditions": {
-	"Has3Subnets": {
-	    "Fn::Not": [
-		{
-		    "Fn::Equals": [
-			{
-			    "Ref": "AWS::Region"
-			},
-			"us-west-1"
-		    ]
-		}
-	    ]
-	},
-	"Has4Subnets": {
-	    "Fn::Or": [
-		{
-		    "Fn::Equals": [
-			{
-			    "Ref": "AWS::Region"
-			},
-			"ap-northeast-2"
-		    ]
-		},
-		{
-		    "Fn::Equals": [
-			{
-			    "Ref": "AWS::Region"
-			},
-			"us-west-2"
-		    ]
-		},
-		{
-		    "Fn::Equals": [
-			{
-			    "Ref": "AWS::Region"
-			},
-			"us-east-1"
-		    ]
-		}
-	    ]
-	},
-	"Has5Subnets": {
-	    "Fn::Equals": [
-		{
-		    "Ref": "AWS::Region"
-		},
-		"us-east-1"
-	    ]
-	},
-	"Has6Subnets": {
-	    "Fn::Equals": [
-		{
-		    "Ref": "AWS::Region"
-		},
-		"us-east-1"
-	    ]
-	}
+        "Has3Subnets": {
+            "Fn::Not": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "us-west-1"
+                    ]
+                }
+            ]
+        },
+        "Has4Subnets": {
+            "Fn::Or": [
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "ap-northeast-2"
+                    ]
+                },
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "us-west-2"
+                    ]
+                },
+                {
+                    "Fn::Equals": [
+                        {
+                            "Ref": "AWS::Region"
+                        },
+                        "us-east-1"
+                    ]
+                }
+            ]
+        },
+        "Has5Subnets": {
+            "Fn::Equals": [
+                {
+                    "Ref": "AWS::Region"
+                },
+                "us-east-1"
+            ]
+        },
+        "Has6Subnets": {
+            "Fn::Equals": [
+                {
+                    "Ref": "AWS::Region"
+                },
+                "us-east-1"
+            ]
+        }
     },
     "Resources": {
-	"rootS3Bucket": {
-	    "Type": "AWS::S3::Bucket",
-	    "Properties": {
-		"BucketName": {
-		    "Fn::Join": [
-			"-",
-			[
-			    "databricks-root-bucket",
-			    { "Fn::Select": [ 0, { "Fn::Split": [ "-", { "Fn::Select": [ 2, { "Fn::Split" : [ "/" , { "Ref": "AWS::StackId" } ] } ] } ] } ] }
-			]
-		    ]
-		},
-		"PublicAccessBlockConfiguration": {
-		    "BlockPublicAcls": true,
-		    "BlockPublicPolicy": true,
-		    "IgnorePublicAcls": true,
-		    "RestrictPublicBuckets": true
-		},
-		"BucketEncryption": {
-		    "ServerSideEncryptionConfiguration": [
-			{
-			    "ServerSideEncryptionByDefault": {
-				"SSEAlgorithm": "aws:kms",
-				"KMSMasterKeyID": "KMS-KEY-ARN"
-			    }
-			}
-		    ]
-		},
-		"VersioningConfiguration": {
-		    "Status": "Enabled"
-		}
-	    }
-	},
-	"rootBucketPolicy": {
-	    "Type": "AWS::S3::BucketPolicy",
-	    "Properties": {
-		"PolicyDocument": {
-		    "Id": "MyPolicy",
-		    "Version": "2012-10-17",
-		    "Statement": [
-			{
-			    "Sid": "Grant Databricks Access",
-			    "Effect": "Allow",
-			    "Principal": {
-				"AWS": "arn:aws:iam::414351767826:root"
-			    },
-			    "Action": [
-				"s3:GetObject",
-				"s3:GetObjectVersion",
-				"s3:PutObject",
-				"s3:DeleteObject",
-				"s3:ListBucket",
-				"s3:GetBucketLocation"
-			    ],
-			    "Resource": [
-				{
-				    "Fn::Sub": "arn:aws:s3:::${rootS3Bucket}/*"
-				},
-				{
-				    "Fn::Sub": "arn:aws:s3:::${rootS3Bucket}"
-				}
-			    ]
-			}
-		    ]
-		},
-		"Bucket": {
-		    "Ref": "rootS3Bucket"
-		}
-	    }
-	},
-	"s3DataBucketsAccessRole": {
-	    "Type": "AWS::IAM::Role",
-	    "Properties": {
-		"RoleName":
-		{
-		    "Fn::Join": [
-			"-",
-			[
-			    "databricks-access-data-buckets",
-			    { "Fn::Select": [ 0, { "Fn::Split": [ "-", { "Fn::Select": [ 2, { "Fn::Split" : [ "/" , { "Ref": "AWS::StackId" } ] } ] } ] } ] }
-			]
-		    ]
-		},
-		"AssumeRolePolicyDocument": {
-		    "Statement": [
-			{
-			    "Effect": "Allow",
-			    "Principal": {
-				"Service": [
-				    "ec2.amazonaws.com"
-				]
-			    },
-			    "Action": [
-				"sts:AssumeRole"
-			    ]
-			}
-		    ]
-		},
-		"Path": "/",
-		"Policies": [
-		    {
-			"PolicyName": "databricks-access-data-buckets",
-			"PolicyDocument": {
-			    "Statement": [
-				{
-				    "Effect": "Allow",
-				    "Action": [
-					"s3:ListBucket",
-					"s3:PutObject",
-					"s3:GetObject",
-					"s3:DeleteObject",
-					"s3:PutObjectAcl"
-				    ],
-				    "Resource": "*"
-				}
-			    ]
-			}
-		    }
-		]
-	    }
-	},
-	"s3DataBucketsAccessRoleInstanceProfile": {
-	    "Type": "AWS::IAM::InstanceProfile",
-	    "Properties": {
-		"InstanceProfileName": {
-		    "Fn::Join": [
-			"-",
-			[
-			    "databricks-access-data-buckets",
-			    { "Fn::Select": [ 0, { "Fn::Split": [ "-", { "Fn::Select": [ 2, { "Fn::Split" : [ "/" , { "Ref": "AWS::StackId" } ] } ] } ] } ] }
-			]
-		    ]
-		},
-		"Path": "/",
-		"Roles": [
-		    {
-			"Ref": "s3DataBucketsAccessRole"
-		    }
-		]
-	    }
-	},
-	"ControlPlaneAccessRole": {
-	    "Type": "AWS::IAM::Role",
-	    "Properties": {
-		"RoleName": {
-		    "Fn::Join": [
-			"-",
-			[
-			    "databricks-control-plane",
-			    { "Fn::Select": [ 0, { "Fn::Split": [ "-", { "Fn::Select": [ 2, { "Fn::Split" : [ "/" , { "Ref": "AWS::StackId" } ] } ] } ] } ] }
-			]
-		    ]
-		},
-		"AssumeRolePolicyDocument": {
-		    "Statement": [
-			{
-			    "Action": "sts:AssumeRole",
-			    "Condition": {
-				"StringEquals": {
-				    "sts:ExternalId": {
-					"Ref": "ExternalID"
-				    }
-				}
-			    },
-			    "Effect": "Allow",
-			    "Principal": {
-				"AWS": {
-				    "Fn::Join": [
-					"",
-					[
-					    "arn:aws:iam::",
-					    "414351767826",
-					    ":root"
-					]
-				    ]
-				}
-			    },
-			    "Sid": ""
-			}
-		    ],
-		    "Version": "2012-10-17"
-		},
-		"Path": "/",
-		"Policies": [
-		    {
-			"PolicyDocument": {
-			    "Statement": [
-				{
-				    "Effect": "Allow",
-				    "Action": [
-					"ec2:AssociateIamInstanceProfile",
-					"ec2:AttachVolume",
-					"ec2:AuthorizeSecurityGroupEgress",
-					"ec2:AuthorizeSecurityGroupIngress",
-					"ec2:CancelSpotInstanceRequests",
-					"ec2:CreateKeyPair",
-					"ec2:CreatePlacementGroup",
-					"ec2:CreateTags",
-					"ec2:CreateVolume",
-					"ec2:DeleteKeyPair",
-					"ec2:DeletePlacementGroup",
-					"ec2:DeleteTags",
-					"ec2:DeleteVolume",
-					"ec2:DescribeAvailabilityZones",
-					"ec2:DescribeIamInstanceProfileAssociations",
-					"ec2:DescribeInstanceStatus",
-					"ec2:DescribeInstances",
-					"ec2:DescribeInternetGateways",
-					"ec2:DescribeNatGateways",
-					"ec2:DescribeNetworkAcls",
-					"ec2:DescribePlacementGroups",
-					"ec2:DescribePrefixLists",
-					"ec2:DescribeReservedInstancesOfferings",
-					"ec2:DescribeRouteTables",
-					"ec2:DescribeSecurityGroups",
-					"ec2:DescribeSpotInstanceRequests",
-					"ec2:DescribeSpotPriceHistory",
-					"ec2:DescribeSubnets",
-					"ec2:DescribeVolumes",
-					"ec2:DescribeVpcAttribute",
-					"ec2:DescribeVpcs",
-					"ec2:DetachVolume",
-					"ec2:DisassociateIamInstanceProfile",
-					"ec2:ReplaceIamInstanceProfileAssociation",
-					"ec2:RequestSpotInstances",
-					"ec2:RevokeSecurityGroupEgress",
-					"ec2:RevokeSecurityGroupIngress",
-					"ec2:RunInstances",
-					"ec2:TerminateInstances"
-				    ],
-				    "Resource": [
-					"*"
-				    ]
-				},
-				{
-				    "Effect": "Allow",
-				    "Action": "iam:PassRole",
-				    "Resource": {
-					"Fn::Sub": "arn:aws:iam::${AWS::AccountId}:role/databricks-access-data-buckets"
-				    }
-				},
-				{
-				    "Effect": "Allow",
-				    "Action": [
-					"iam:CreateServiceLinkedRole",
-					"iam:PutRolePolicy"
-				    ],
-				    "Resource": "arn:aws:iam::*:role/aws-service-role/spot.amazonaws.com/AWSServiceRoleForEC2Spot",
-				    "Condition": {
-					"StringLike": {
-					    "iam:AWSServiceName": "spot.amazonaws.com"
-					}
-				    }
-				}
-			    ],
-			    "Version": "2012-10-17"
-			},
-			"PolicyName": "databricks-control-plane"
-		    }
-		]
-	    }
-	}
-	,
-	"ControlPlaneAccessRoleInstanceProfile":
-	{
-	    "Type": "AWS::IAM::InstanceProfile",
-	    "Properties":
-	    {
-		"InstanceProfileName":
-		{
-		    "Fn::Join":
-		    [
-			"-",
-			[
-			    "databricks-control-plane",
-			    { "Fn::Select": [ 0, { "Fn::Split": [ "-", { "Fn::Select": [ 2, { "Fn::Split" : [ "/" , { "Ref": "AWS::StackId" } ] } ] } ] } ] }
- 			]
-		    ]
-		},
-		"Path": "/",
-		"Roles": [
-		    {
-			"Ref": "ControlPlaneAccessRole"
-		    }
-		]
-	    }
-	},
-	"VPC":
-	{
-	    "Type": "AWS::EC2::VPC",
-	    "Properties":
-	    {
-		"Tags":
-		[
-		    {
-			"Key": "Name",
-			"Value":
-			{
-			    "Fn::Sub":
-			    [
-				"${basename}",
-				{
-				    "basename":
-				    {
-					"Ref": "basename"
-				    }
-				}
-			    ]
-			}
-		    }
-		],
-		"CidrBlock": "10.0.0.0/16",
-		"EnableDnsHostnames": true,
-		"EnableDnsSupport": true
-	    }
-	},
-	"SubnetNAT":
-	{
-	    "Type": "AWS::EC2::Subnet",
-	    "Properties":
-	    {
-		"Tags":
-		[
-		    {
-			"Key": "Name",
-			"Value":
-			{
-			    "Fn::Sub":
-			    [
-				"${basename}-nat",
-				{
-				    "basename":
-				    {
-					"Ref": "basename"
-				    }
-				}
-			    ]
-			}
-		    }
-		],
-		"CidrBlock": "10.0.224.0/19",
-		"VpcId": {
-		    "Ref": "VPC"
-		}
-	    }
-	},
-	"SubnetA": {
-	    "Type": "AWS::EC2::Subnet",
-	    "Properties": {
-		"Tags": [
-		    {
-			"Key": "Name",
-			"Value": {
-			    "Fn::Sub": [
-				"${basename}-${az}",
-				{
-				    "basename": {
-					"Ref": "basename"
-				    },
-				    "az": {
-					"Fn::Select": [
-					    0,
-					    {
-						"Fn::GetAZs": ""
-					    }
-					]
-				    }
-				}
-			    ]
-			}
-		    }
-		],
-		"AvailabilityZone": {
-		    "Fn::Select": [
-			0,
-			{
-			    "Fn::GetAZs": ""
-			}
-		    ]
-		},
-		"CidrBlock": "10.0.0.0/19",
-		"VpcId": {
-		    "Ref": "VPC"
-		}
-	    }
-	},
-	"SubnetB": {
-	    "Type": "AWS::EC2::Subnet",
-	    "Properties": {
-		"Tags": [
-		    {
-			"Key": "Name",
-			"Value": {
-			    "Fn::Sub": [
-				"${basename}-${az}",
-				{
-				    "basename": {
-					"Ref": "basename"
-				    },
-				    "az": {
-					"Fn::Select": [
-					    1,
-					    {
-						"Fn::GetAZs": ""
-					    }
-					]
-				    }
-				}
-			    ]
-			}
-		    }
-		],
-		"AvailabilityZone": {
-		    "Fn::Select": [
-			1,
-			{
-			    "Fn::GetAZs": ""
-			}
-		    ]
-		},
-		"CidrBlock": "10.0.32.0/19",
-		"VpcId": {
-		    "Ref": "VPC"
-		}
-	    }
-	},
-	"SubnetC": {
-	    "Type": "AWS::EC2::Subnet",
-	    "Condition": "Has3Subnets",
-	    "Properties": {
-		"Tags": [
-		    {
-			"Key": "Name",
-			"Value": {
-			    "Fn::Sub": [
-				"${basename}-${az}",
-				{
-				    "basename": {
-					"Ref": "basename"
-				    },
-				    "az": {
-					"Fn::Select": [
-					    2,
-					    {
-						"Fn::GetAZs": ""
-					    }
-					]
-				    }
-				}
-			    ]
-			}
-		    }
-		],
-		"AvailabilityZone": {
-		    "Fn::Select": [
-			2,
-			{
-			    "Fn::GetAZs": ""
-			}
-		    ]
-		},
-		"CidrBlock": "10.0.64.0/19",
-		"VpcId": {
-		    "Ref": "VPC"
-		}
-	    }
-	},
-	"SubnetD": {
-	    "Type": "AWS::EC2::Subnet",
-	    "Condition": "Has4Subnets",
-	    "Properties": {
-		"Tags": [
-		    {
-			"Key": "Name",
-			"Value": {
-			    "Fn::Sub": [
-				"${basename}-${az}",
-				{
-				    "basename": {
-					"Ref": "basename"
-				    },
-				    "az": {
-					"Fn::Select": [
-					    3,
-					    {
-						"Fn::GetAZs": ""
-					    }
-					]
-				    }
-				}
-			    ]
-			}
-		    }
-		],
-		"AvailabilityZone": {
-		    "Fn::Select": [
-			3,
-			{
-			    "Fn::GetAZs": ""
-			}
-		    ]
-		},
-		"CidrBlock": "10.0.96.0/19",
-		"VpcId": {
-		    "Ref": "VPC"
-		}
-	    }
-	},
-	"SubnetE": {
-	    "Type": "AWS::EC2::Subnet",
-	    "Condition": "Has5Subnets",
-	    "Properties": {
-		"Tags": [
-		    {
-			"Key": "Name",
-			"Value": {
-			    "Fn::Sub": [
-				"${basename}-${az}",
-				{
-				    "basename": {
-					"Ref": "basename"
-				    },
-				    "az": {
-					"Fn::Select": [
-					    4,
-					    {
-						"Fn::GetAZs": ""
-					    }
-					]
-				    }
-				}
-			    ]
-			}
-		    }
-		],
-		"AvailabilityZone": {
-		    "Fn::Select": [
-			4,
-			{
-			    "Fn::GetAZs": ""
-			}
-		    ]
-		},
-		"CidrBlock": "10.0.128.0/19",
-		"VpcId": {
-		    "Ref": "VPC"
-		}
-	    }
-	},
-	"SubnetF": {
-	    "Type": "AWS::EC2::Subnet",
-	    "Condition": "Has6Subnets",
-	    "Properties": {
-		"Tags": [
-		    {
-			"Key": "Name",
-			"Value": {
-			    "Fn::Sub": [
-				"${basename}-${az}",
-				{
-				    "basename": {
-					"Ref": "basename"
-				    },
-				    "az": {
-					"Fn::Select": [
-					    5,
-					    {
-						"Fn::GetAZs": ""
-					    }
-					]
-				    }
-				}
-			    ]
-			}
-		    }
-		],
-		"AvailabilityZone": {
-		    "Fn::Select": [
-			5,
-			{
-			    "Fn::GetAZs": ""
-			}
-		    ]
-		},
-		"CidrBlock": "10.0.160.0/19",
-		"VpcId": {
-		    "Ref": "VPC"
-		}
-	    }
-	},
-	"IGW": {
-	    "Type": "AWS::EC2::InternetGateway",
-	    "Properties": {
-		"Tags": [
-		    {
-			"Key": "Name",
-			"Value": {
-			    "Fn::Sub": [
-				"${basename}",
-				{
-				    "basename": {
-					"Ref": "basename"
-				    }
-				}
-			    ]
-			}
-		    }
-		]
-	    }
-	},
-	"VPCGatewayAttachment": {
-	    "Type": "AWS::EC2::VPCGatewayAttachment",
-	    "Properties": {
-		"InternetGatewayId": {
-		    "Ref": "IGW"
-		},
-		"VpcId": {
-		    "Ref": "VPC"
-		}
-	    }
-	},
-	"EIP": {
-	    "Type": "AWS::EC2::EIP",
-	    "Properties": {
-		"Domain": "vpc",
-		"Tags": [
-		    {
-			"Key": "Name",
-			"Value": {
-			    "Fn::Sub": [
-				"${basename}",
-				{
-				    "basename": {
-					"Ref": "basename"
-				    }
-				}
-			    ]
-			}
-		    }
-		]
-	    }
-	},
-	"NATGateway": {
-	    "Type": "AWS::EC2::NatGateway",
-	    "Properties": {
-		"Tags": [
-		    {
-			"Key": "Name",
-			"Value": {
-			    "Fn::Sub": [
-				"${basename}",
-				{
-				    "basename": {
-					"Ref": "basename"
-				    }
-				}
-			    ]
-			}
-		    }
-		],
-		"AllocationId": {
-		    "Fn::GetAtt": [
-			"EIP",
-			"AllocationId"
-		    ]
-		},
-		"SubnetId": {
-		    "Ref": "SubnetNAT"
-		}
-	    }
-	},
-	"RouteTableNAT": {
-	    "Type": "AWS::EC2::RouteTable",
-	    "Properties": {
-		"Tags": [
-		    {
-			"Key": "Name",
-			"Value": {
-			    "Fn::Sub": [
-				"${basename}-public",
-				{
-				    "basename": {
-					"Ref": "basename"
-				    }
-				}
-			    ]
-			}
-		    }
-		],
-		"VpcId": {
-		    "Ref": "VPC"
-		}
-	    }
-	},
-	"RouteNAT": {
-	    "Type": "AWS::EC2::Route",
-	    "Properties": {
-		"DestinationCidrBlock": "0.0.0.0/0",
-		"GatewayId": {
-		    "Ref": "IGW"
-		},
-		"RouteTableId": {
-		    "Ref": "RouteTableNAT"
-		}
-	    }
-	},
-	"SubnetRouteTableAssociationNAT": {
-	    "Type": "AWS::EC2::SubnetRouteTableAssociation",
-	    "Properties": {
-		"SubnetId": {
-		    "Ref": "SubnetNAT"
-		},
-		"RouteTableId": {
-		    "Ref": "RouteTableNAT"
-		}
-	    }
-	},
-	"RouteTablePrivate": {
-	    "Type": "AWS::EC2::RouteTable",
-	    "Properties": {
-		"Tags": [
-		    {
-			"Key": "Name",
-			"Value": {
-			    "Fn::Sub": [
-				"${basename}-private",
-				{
-				    "basename": {
-					"Ref": "basename"
-				    }
-				}
-			    ]
-			}
-		    }
-		],
-		"VpcId": {
-		    "Ref": "VPC"
-		}
-	    }
-	},
-	"RoutePrivate": {
-	    "Type": "AWS::EC2::Route",
-	    "Properties": {
-		"DestinationCidrBlock": "0.0.0.0/0",
-		"NatGatewayId": {
-		    "Ref": "NATGateway"
-		},
-		"RouteTableId": {
-		    "Ref": "RouteTablePrivate"
-		}
-	    }
-	},
-	"SubnetRouteTableAssociationA": {
-	    "Type": "AWS::EC2::SubnetRouteTableAssociation",
-	    "Properties": {
-		"SubnetId": {
-		    "Ref": "SubnetA"
-		},
-		"RouteTableId": {
-		    "Ref": "RouteTablePrivate"
-		}
-	    }
-	},
-	"SubnetRouteTableAssociationB": {
-	    "Type": "AWS::EC2::SubnetRouteTableAssociation",
-	    "Properties": {
-		"SubnetId": {
-		    "Ref": "SubnetB"
-		},
-		"RouteTableId": {
-		    "Ref": "RouteTablePrivate"
-		}
-	    }
-	},
-	"SubnetRouteTableAssociationC": {
-	    "Type": "AWS::EC2::SubnetRouteTableAssociation",
-	    "Condition": "Has3Subnets",
-	    "Properties": {
-		"SubnetId": {
-		    "Ref": "SubnetC"
-		},
-		"RouteTableId": {
-		    "Ref": "RouteTablePrivate"
-		}
-	    }
-	},
-	"SubnetRouteTableAssociationD": {
-	    "Type": "AWS::EC2::SubnetRouteTableAssociation",
-	    "Condition": "Has4Subnets",
-	    "Properties": {
-		"SubnetId": {
-		    "Ref": "SubnetD"
-		},
-		"RouteTableId": {
-		    "Ref": "RouteTablePrivate"
-		}
-	    }
-	},
-	"SubnetRouteTableAssociationE": {
-	    "Type": "AWS::EC2::SubnetRouteTableAssociation",
-	    "Condition": "Has5Subnets",
-	    "Properties": {
-		"SubnetId": {
-		    "Ref": "SubnetE"
-		},
-		"RouteTableId": {
-		    "Ref": "RouteTablePrivate"
-		}
-	    }
-	},
-	"SubnetRouteTableAssociationF": {
-	    "Type": "AWS::EC2::SubnetRouteTableAssociation",
-	    "Condition": "Has6Subnets",
-	    "Properties": {
-		"SubnetId": {
-		    "Ref": "SubnetF"
-		},
-		"RouteTableId": {
-		    "Ref": "RouteTablePrivate"
-		}
-	    }
-	},
-	"NetworkAcl": {
-	    "Type": "AWS::EC2::NetworkAcl",
-	    "Properties": {
-		"Tags": [
-		    {
-			"Key": "Name",
-			"Value": {
-			    "Fn::Sub": [
-				"${basename}",
-				{
-				    "basename": {
-					"Ref": "basename"
-				    }
-				}
-			    ]
-			}
-		    }
-		],
-		"VpcId": {
-		    "Ref": "VPC"
-		}
-	    }
-	},
-	"NetworkAclEntryInboundAllow": {
-	    "Type": "AWS::EC2::NetworkAclEntry",
-	    "Properties": {
-		"Egress": false,
-		"CidrBlock": "0.0.0.0/0",
-		"Protocol": -1,
-		"RuleNumber": 100,
-		"RuleAction": "ALLOW",
-		"NetworkAclId": {
-		    "Ref": "NetworkAcl"
-		}
-	    }
-	},
-	"NetworkAclEntryOutboundAllow": {
-	    "Type": "AWS::EC2::NetworkAclEntry",
-	    "Properties": {
-		"Egress": true,
-		"CidrBlock": "0.0.0.0/0",
-		"Protocol": -1,
-		"RuleNumber": 100,
-		"RuleAction": "ALLOW",
-		"NetworkAclId": {
-		    "Ref": "NetworkAcl"
-		}
-	    }
-	},
-	"SubnetNetworkAclNAT": {
-	    "Type": "AWS::EC2::SubnetNetworkAclAssociation",
-	    "Properties": {
-		"NetworkAclId": {
-		    "Ref": "NetworkAcl"
-		},
-		"SubnetId": {
-		    "Ref": "SubnetNAT"
-		}
-	    }
-	},
-	"SubnetNetworkAclA": {
-	    "Type": "AWS::EC2::SubnetNetworkAclAssociation",
-	    "Properties": {
-		"NetworkAclId": {
-		    "Ref": "NetworkAcl"
-		},
-		"SubnetId": {
-		    "Ref": "SubnetA"
-		}
-	    }
-	},
-	"SubnetNetworkAclB": {
-	    "Type": "AWS::EC2::SubnetNetworkAclAssociation",
-	    "Properties": {
-		"NetworkAclId": {
-		    "Ref": "NetworkAcl"
-		},
-		"SubnetId": {
-		    "Ref": "SubnetB"
-		}
-	    }
-	},
-	"SubnetNetworkAclC": {
-	    "Type": "AWS::EC2::SubnetNetworkAclAssociation",
-	    "Condition": "Has3Subnets",
-	    "Properties": {
-		"NetworkAclId": {
-		    "Ref": "NetworkAcl"
-		},
-		"SubnetId": {
-		    "Ref": "SubnetC"
-		}
-	    }
-	},
-	"SubnetNetworkAclD": {
-	    "Type": "AWS::EC2::SubnetNetworkAclAssociation",
-	    "Condition": "Has4Subnets",
-	    "Properties": {
-		"NetworkAclId": {
-		    "Ref": "NetworkAcl"
-		},
-		"SubnetId": {
-		    "Ref": "SubnetD"
-		}
-	    }
-	},
-	"SubnetNetworkAclE": {
-	    "Type": "AWS::EC2::SubnetNetworkAclAssociation",
-	    "Condition": "Has5Subnets",
-	    "Properties": {
-		"NetworkAclId": {
-		    "Ref": "NetworkAcl"
-		},
-		"SubnetId": {
-		    "Ref": "SubnetE"
-		}
-	    }
-	},
-	"SubnetNetworkAclF": {
-	    "Type": "AWS::EC2::SubnetNetworkAclAssociation",
-	    "Condition": "Has6Subnets",
-	    "Properties": {
-		"NetworkAclId": {
-		    "Ref": "NetworkAcl"
-		},
-		"SubnetId": {
-		    "Ref": "SubnetF"
-		}
-	    }
-	},
-	"SecurityGroup": {
-	    "Type": "AWS::EC2::SecurityGroup",
-	    "Properties": {
-		"Tags": [
-		    {
-			"Key": "Name",
-			"Value": {
-			    "Fn::Sub": [
-				"${basename}",
-				{
-				    "basename": {
-					"Ref": "basename"
-				    }
-				}
-			    ]
-			}
-		    }
-		],
-		"GroupDescription": "Databricks security group",
-		"GroupName": "databricks",
-		"VpcId": {
-		    "Ref": "VPC"
-		}
-	    }
-	},
-	"SecurityGroupIngressTcp": {
-	    "Type": "AWS::EC2::SecurityGroupIngress",
-	    "Properties": {
-		"GroupId": {
-		    "Ref": "SecurityGroup"
-		},
-		"SourceSecurityGroupId": {
-		    "Ref": "SecurityGroup"
-		},
-		"IpProtocol": "tcp",
-		"FromPort": 0,
-		"ToPort": 65535
-	    }
-	},
-	"SecurityGroupIngressUdp": {
-	    "Type": "AWS::EC2::SecurityGroupIngress",
-	    "Properties": {
-		"GroupId": {
-		    "Ref": "SecurityGroup"
-		},
-		"SourceSecurityGroupId": {
-		    "Ref": "SecurityGroup"
-		},
-		"IpProtocol": "udp",
-		"FromPort": 0,
-		"ToPort": 65535
-	    }
-	},
-	"SecurityGroupEgressAll": {
-	    "Type": "AWS::EC2::SecurityGroupEgress",
-	    "Properties": {
-		"GroupId": {
-		    "Ref": "SecurityGroup"
-		},
-		"CidrIp": "0.0.0.0/0",
-		"IpProtocol": "-1"
-	    }
-	},
-	"VPCEndpointS3": {
-	    "Type": "AWS::EC2::VPCEndpoint",
-	    "Properties": {
-		"RouteTableIds": [
-		    {
-			"Ref": "RouteTablePrivate"
-		    }
-		],
-		"ServiceName": {
-		    "Fn::Sub": "com.amazonaws.${AWS::Region}.s3"
-		},
-		"VpcId": {
-		    "Ref": "VPC"
-		}
-	    }
-	}
+        "rootS3Bucket": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            { "Ref": "AWS::StackName" },
+                            "root-bucket",
+                            { "Fn::Select": [ 0, { "Fn::Split": [ "-", { "Fn::Select": [ 2, { "Fn::Split" : [ "/" , { "Ref": "AWS::StackId" } ] } ] } ] } ] }
+                        ]
+                    ]
+                },
+                "PublicAccessBlockConfiguration": {
+                    "BlockPublicAcls": true,
+                    "BlockPublicPolicy": true,
+                    "IgnorePublicAcls": true,
+                    "RestrictPublicBuckets": true
+                },
+                "BucketEncryption": {
+                    "ServerSideEncryptionConfiguration": [
+                        {
+                            "ServerSideEncryptionByDefault": {
+                                "SSEAlgorithm": "aws:kms",
+                                "KMSMasterKeyID": "KMS-KEY-ARN"
+                            }
+                        }
+                    ]
+                },
+                "VersioningConfiguration": {
+                    "Status": "Enabled"
+                }
+            }
+        },
+        "rootBucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+                "PolicyDocument": {
+                    "Id": "MyPolicy",
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Sid": "Grant Databricks Access",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": "arn:aws:iam::414351767826:root"
+                            },
+                            "Action": [
+                                "s3:GetObject",
+                                "s3:GetObjectVersion",
+                                "s3:PutObject",
+                                "s3:DeleteObject",
+                                "s3:ListBucket",
+                                "s3:GetBucketLocation"
+                            ],
+                            "Resource": [
+                                {
+                                    "Fn::Sub": "arn:aws:s3:::${rootS3Bucket}/*"
+                                },
+                                {
+                                    "Fn::Sub": "arn:aws:s3:::${rootS3Bucket}"
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "Bucket": {
+                    "Ref": "rootS3Bucket"
+                }
+            }
+        },
+        "s3DataBucketsAccessRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "RoleName":
+                {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            { "Ref": "AWS::StackName" },
+                            "access-data-buckets"
+                        ]
+                    ]
+                },
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "ec2.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyName": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    { "Ref": "AWS::StackName" },
+                                    "access-data-buckets"
+                                ]
+                            ]
+                        },
+                        "PolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "s3:ListBucket",
+                                        "s3:PutObject",
+                                        "s3:GetObject",
+                                        "s3:DeleteObject",
+                                        "s3:PutObjectAcl"
+                                    ],
+                                    "Resource": "*"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "s3DataBucketsAccessRoleInstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "InstanceProfileName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            { "Ref": "AWS::StackName" },
+                            "access-data-buckets"
+                        ]
+                    ]
+                },
+                "Path": "/",
+                "Roles": [
+                    {
+                        "Ref": "s3DataBucketsAccessRole"
+                    }
+                ]
+            }
+        },
+        "ControlPlaneAccessRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "RoleName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            { "Ref": "AWS::StackName" },
+                            "control-plane"
+                        ]
+                    ]
+                },
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Condition": {
+                                "StringEquals": {
+                                    "sts:ExternalId": {
+                                        "Ref": "ExternalID"
+                                    }
+                                }
+                            },
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": {
+                                    "Fn::Join": [
+                                        "",
+                                        [
+                                            "arn:aws:iam::",
+                                            "414351767826",
+                                            ":root"
+                                        ]
+                                    ]
+                                }
+                            },
+                            "Sid": ""
+                        }
+                    ],
+                    "Version": "2012-10-17"
+                },
+                "Path": "/",
+                "Policies": [
+                    {
+                        "PolicyDocument": {
+                            "Statement": [
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "ec2:AssociateIamInstanceProfile",
+                                        "ec2:AttachVolume",
+                                        "ec2:AuthorizeSecurityGroupEgress",
+                                        "ec2:AuthorizeSecurityGroupIngress",
+                                        "ec2:CancelSpotInstanceRequests",
+                                        "ec2:CreateKeyPair",
+                                        "ec2:CreatePlacementGroup",
+                                        "ec2:CreateTags",
+                                        "ec2:CreateVolume",
+                                        "ec2:DeleteKeyPair",
+                                        "ec2:DeletePlacementGroup",
+                                        "ec2:DeleteTags",
+                                        "ec2:DeleteVolume",
+                                        "ec2:DescribeAvailabilityZones",
+                                        "ec2:DescribeIamInstanceProfileAssociations",
+                                        "ec2:DescribeInstanceStatus",
+                                        "ec2:DescribeInstances",
+                                        "ec2:DescribeInternetGateways",
+                                        "ec2:DescribeNatGateways",
+                                        "ec2:DescribeNetworkAcls",
+                                        "ec2:DescribePlacementGroups",
+                                        "ec2:DescribePrefixLists",
+                                        "ec2:DescribeReservedInstancesOfferings",
+                                        "ec2:DescribeRouteTables",
+                                        "ec2:DescribeSecurityGroups",
+                                        "ec2:DescribeSpotInstanceRequests",
+                                        "ec2:DescribeSpotPriceHistory",
+                                        "ec2:DescribeSubnets",
+                                        "ec2:DescribeVolumes",
+                                        "ec2:DescribeVpcAttribute",
+                                        "ec2:DescribeVpcs",
+                                        "ec2:DetachVolume",
+                                        "ec2:DisassociateIamInstanceProfile",
+                                        "ec2:ReplaceIamInstanceProfileAssociation",
+                                        "ec2:RequestSpotInstances",
+                                        "ec2:RevokeSecurityGroupEgress",
+                                        "ec2:RevokeSecurityGroupIngress",
+                                        "ec2:RunInstances",
+                                        "ec2:TerminateInstances"
+                                    ],
+                                    "Resource": [
+                                        "*"
+                                    ]
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": "iam:PassRole",
+                                    "Resource": {
+                                        "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:role/${AWS::StackName}-access-data-buckets"
+                                    }
+                                },
+                                {
+                                    "Effect": "Allow",
+                                    "Action": [
+                                        "iam:CreateServiceLinkedRole",
+                                        "iam:PutRolePolicy"
+                                    ],
+                                    "Resource": "arn:aws:iam::*:role/aws-service-role/spot.amazonaws.com/AWSServiceRoleForEC2Spot",
+                                    "Condition": {
+                                        "StringLike": {
+                                            "iam:AWSServiceName": "spot.amazonaws.com"
+                                        }
+                                    }
+                                }
+                            ],
+                            "Version": "2012-10-17"
+                        },
+                        "PolicyName":
+                        { "Fn::Join": [ "-", [
+                                               { "Ref": "AWS::StackName" },
+                                               "control-plane"
+                                             ]
+                                      ]
+                        }
+                    }
+                ]
+            }
+        }
+        ,
+        "ControlPlaneAccessRoleInstanceProfile":
+        {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties":
+            {
+                "InstanceProfileName":
+                {
+                    "Fn::Join":
+                    [
+                        "-",
+                        [
+                            { "Ref": "AWS::StackName" },
+                            "control-plane"
+                        ]
+                    ]
+                },
+                "Path": "/",
+                "Roles": [
+                    {
+                        "Ref": "ControlPlaneAccessRole"
+                    }
+                ]
+            }
+        },
+        "VPC":
+        {
+            "Type": "AWS::EC2::VPC",
+            "Properties":
+            {
+                "Tags":
+                [
+                    {
+                        "Key": "Name",
+                        "Value":
+                        {
+                            "Fn::Sub":
+                            [
+                                "${basename}",
+                                {
+                                    "basename":
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "CidrBlock": "10.0.0.0/16",
+                "EnableDnsHostnames": true,
+                "EnableDnsSupport": true
+            }
+        },
+        "SubnetNAT":
+        {
+            "Type": "AWS::EC2::Subnet",
+            "Properties":
+            {
+                "Tags":
+                [
+                    {
+                        "Key": "Name",
+                        "Value":
+                        {
+                            "Fn::Sub":
+                            [
+                                "${basename}-nat",
+                                {
+                                    "basename":
+                                    {
+                                        "Ref": "AWS::StackName"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "CidrBlock": "10.0.224.0/19",
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        },
+        "SubnetA": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": [
+                                "${basename}-${az}",
+                                {
+                                    "basename": {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "az": {
+                                        "Fn::Select": [
+                                            0,
+                                            {
+                                                "Fn::GetAZs": ""
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "AvailabilityZone": {
+                    "Fn::Select": [
+                        0,
+                        {
+                            "Fn::GetAZs": ""
+                        }
+                    ]
+                },
+                "CidrBlock": "10.0.0.0/19",
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        },
+        "SubnetB": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": [
+                                "${basename}-${az}",
+                                {
+                                    "basename": {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "az": {
+                                        "Fn::Select": [
+                                            1,
+                                            {
+                                                "Fn::GetAZs": ""
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "AvailabilityZone": {
+                    "Fn::Select": [
+                        1,
+                        {
+                            "Fn::GetAZs": ""
+                        }
+                    ]
+                },
+                "CidrBlock": "10.0.32.0/19",
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        },
+        "SubnetC": {
+            "Type": "AWS::EC2::Subnet",
+            "Condition": "Has3Subnets",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": [
+                                "${basename}-${az}",
+                                {
+                                    "basename": {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "az": {
+                                        "Fn::Select": [
+                                            2,
+                                            {
+                                                "Fn::GetAZs": ""
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "AvailabilityZone": {
+                    "Fn::Select": [
+                        2,
+                        {
+                            "Fn::GetAZs": ""
+                        }
+                    ]
+                },
+                "CidrBlock": "10.0.64.0/19",
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        },
+        "SubnetD": {
+            "Type": "AWS::EC2::Subnet",
+            "Condition": "Has4Subnets",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": [
+                                "${basename}-${az}",
+                                {
+                                    "basename": {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "az": {
+                                        "Fn::Select": [
+                                            3,
+                                            {
+                                                "Fn::GetAZs": ""
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "AvailabilityZone": {
+                    "Fn::Select": [
+                        3,
+                        {
+                            "Fn::GetAZs": ""
+                        }
+                    ]
+                },
+                "CidrBlock": "10.0.96.0/19",
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        },
+        "SubnetE": {
+            "Type": "AWS::EC2::Subnet",
+            "Condition": "Has5Subnets",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": [
+                                "${basename}-${az}",
+                                {
+                                    "basename": {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "az": {
+                                        "Fn::Select": [
+                                            4,
+                                            {
+                                                "Fn::GetAZs": ""
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "AvailabilityZone": {
+                    "Fn::Select": [
+                        4,
+                        {
+                            "Fn::GetAZs": ""
+                        }
+                    ]
+                },
+                "CidrBlock": "10.0.128.0/19",
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        },
+        "SubnetF": {
+            "Type": "AWS::EC2::Subnet",
+            "Condition": "Has6Subnets",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": [
+                                "${basename}-${az}",
+                                {
+                                    "basename": {
+                                        "Ref": "AWS::StackName"
+                                    },
+                                    "az": {
+                                        "Fn::Select": [
+                                            5,
+                                            {
+                                                "Fn::GetAZs": ""
+                                            }
+                                        ]
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "AvailabilityZone": {
+                    "Fn::Select": [
+                        5,
+                        {
+                            "Fn::GetAZs": ""
+                        }
+                    ]
+                },
+                "CidrBlock": "10.0.160.0/19",
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        },
+        "IGW": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": [
+                                "${basename}",
+                                {
+                                    "basename": {
+                                        "Ref": "AWS::StackName"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "VPCGatewayAttachment": {
+            "Type": "AWS::EC2::VPCGatewayAttachment",
+            "Properties": {
+                "InternetGatewayId": {
+                    "Ref": "IGW"
+                },
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        },
+        "EIP": {
+            "Type": "AWS::EC2::EIP",
+            "Properties": {
+                "Domain": "vpc",
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": [
+                                "${basename}",
+                                {
+                                    "basename": {
+                                        "Ref": "AWS::StackName"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        "NATGateway": {
+            "Type": "AWS::EC2::NatGateway",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": [
+                                "${basename}",
+                                {
+                                    "basename": {
+                                        "Ref": "AWS::StackName"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "AllocationId": {
+                    "Fn::GetAtt": [
+                        "EIP",
+                        "AllocationId"
+                    ]
+                },
+                "SubnetId": {
+                    "Ref": "SubnetNAT"
+                }
+            }
+        },
+        "RouteTableNAT": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": [
+                                "${basename}-public",
+                                {
+                                    "basename": {
+                                        "Ref": "AWS::StackName"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        },
+        "RouteNAT": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "GatewayId": {
+                    "Ref": "IGW"
+                },
+                "RouteTableId": {
+                    "Ref": "RouteTableNAT"
+                }
+            }
+        },
+        "SubnetRouteTableAssociationNAT": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "SubnetNAT"
+                },
+                "RouteTableId": {
+                    "Ref": "RouteTableNAT"
+                }
+            }
+        },
+        "RouteTablePrivate": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": [
+                                "${basename}-private",
+                                {
+                                    "basename": {
+                                        "Ref": "AWS::StackName"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        },
+        "RoutePrivate": {
+            "Type": "AWS::EC2::Route",
+            "Properties": {
+                "DestinationCidrBlock": "0.0.0.0/0",
+                "NatGatewayId": {
+                    "Ref": "NATGateway"
+                },
+                "RouteTableId": {
+                    "Ref": "RouteTablePrivate"
+                }
+            }
+        },
+        "SubnetRouteTableAssociationA": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "SubnetA"
+                },
+                "RouteTableId": {
+                    "Ref": "RouteTablePrivate"
+                }
+            }
+        },
+        "SubnetRouteTableAssociationB": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "SubnetB"
+                },
+                "RouteTableId": {
+                    "Ref": "RouteTablePrivate"
+                }
+            }
+        },
+        "SubnetRouteTableAssociationC": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Condition": "Has3Subnets",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "SubnetC"
+                },
+                "RouteTableId": {
+                    "Ref": "RouteTablePrivate"
+                }
+            }
+        },
+        "SubnetRouteTableAssociationD": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Condition": "Has4Subnets",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "SubnetD"
+                },
+                "RouteTableId": {
+                    "Ref": "RouteTablePrivate"
+                }
+            }
+        },
+        "SubnetRouteTableAssociationE": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Condition": "Has5Subnets",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "SubnetE"
+                },
+                "RouteTableId": {
+                    "Ref": "RouteTablePrivate"
+                }
+            }
+        },
+        "SubnetRouteTableAssociationF": {
+            "Type": "AWS::EC2::SubnetRouteTableAssociation",
+            "Condition": "Has6Subnets",
+            "Properties": {
+                "SubnetId": {
+                    "Ref": "SubnetF"
+                },
+                "RouteTableId": {
+                    "Ref": "RouteTablePrivate"
+                }
+            }
+        },
+        "NetworkAcl": {
+            "Type": "AWS::EC2::NetworkAcl",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": [
+                                "${basename}",
+                                {
+                                    "basename": {
+                                        "Ref": "AWS::StackName"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        },
+        "NetworkAclEntryInboundAllow": {
+            "Type": "AWS::EC2::NetworkAclEntry",
+            "Properties": {
+                "Egress": false,
+                "CidrBlock": "0.0.0.0/0",
+                "Protocol": -1,
+                "RuleNumber": 100,
+                "RuleAction": "ALLOW",
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                }
+            }
+        },
+        "NetworkAclEntryOutboundAllow": {
+            "Type": "AWS::EC2::NetworkAclEntry",
+            "Properties": {
+                "Egress": true,
+                "CidrBlock": "0.0.0.0/0",
+                "Protocol": -1,
+                "RuleNumber": 100,
+                "RuleAction": "ALLOW",
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                }
+            }
+        },
+        "SubnetNetworkAclNAT": {
+            "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+            "Properties": {
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "SubnetId": {
+                    "Ref": "SubnetNAT"
+                }
+            }
+        },
+        "SubnetNetworkAclA": {
+            "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+            "Properties": {
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "SubnetId": {
+                    "Ref": "SubnetA"
+                }
+            }
+        },
+        "SubnetNetworkAclB": {
+            "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+            "Properties": {
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "SubnetId": {
+                    "Ref": "SubnetB"
+                }
+            }
+        },
+        "SubnetNetworkAclC": {
+            "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+            "Condition": "Has3Subnets",
+            "Properties": {
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "SubnetId": {
+                    "Ref": "SubnetC"
+                }
+            }
+        },
+        "SubnetNetworkAclD": {
+            "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+            "Condition": "Has4Subnets",
+            "Properties": {
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "SubnetId": {
+                    "Ref": "SubnetD"
+                }
+            }
+        },
+        "SubnetNetworkAclE": {
+            "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+            "Condition": "Has5Subnets",
+            "Properties": {
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "SubnetId": {
+                    "Ref": "SubnetE"
+                }
+            }
+        },
+        "SubnetNetworkAclF": {
+            "Type": "AWS::EC2::SubnetNetworkAclAssociation",
+            "Condition": "Has6Subnets",
+            "Properties": {
+                "NetworkAclId": {
+                    "Ref": "NetworkAcl"
+                },
+                "SubnetId": {
+                    "Ref": "SubnetF"
+                }
+            }
+        },
+        "SecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": {
+                            "Fn::Sub": [
+                                "${basename}",
+                                {
+                                    "basename": {
+                                        "Ref": "AWS::StackName"
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "GroupDescription": "Databricks security group",
+                "GroupName":
+                {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            { "Ref": "AWS::StackName" },
+                            "security-group"
+                        ]
+                    ]
+                },
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        },
+        "SecurityGroupIngressTcp": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "SecurityGroup"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "SecurityGroup"
+                },
+                "IpProtocol": "tcp",
+                "FromPort": 0,
+                "ToPort": 65535
+            }
+        },
+        "SecurityGroupIngressUdp": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "SecurityGroup"
+                },
+                "SourceSecurityGroupId": {
+                    "Ref": "SecurityGroup"
+                },
+                "IpProtocol": "udp",
+                "FromPort": 0,
+                "ToPort": 65535
+            }
+        },
+        "SecurityGroupEgressAll": {
+            "Type": "AWS::EC2::SecurityGroupEgress",
+            "Properties": {
+                "GroupId": {
+                    "Ref": "SecurityGroup"
+                },
+                "CidrIp": "0.0.0.0/0",
+                "IpProtocol": "-1"
+            }
+        },
+        "VPCEndpointS3": {
+            "Type": "AWS::EC2::VPCEndpoint",
+            "Properties": {
+                "RouteTableIds": [
+                    {
+                        "Ref": "RouteTablePrivate"
+                    }
+                ],
+                "ServiceName": {
+                    "Fn::Sub": "com.amazonaws.${AWS::Region}.s3"
+                },
+                "VpcId": {
+                    "Ref": "VPC"
+                }
+            }
+        }
     },
     "Outputs": {
-	"ControlPlaneRoleARN": {
-	    "Description": "The ARN of the cross account role for the Databricks Control Plane",
-	    "Value": {
-		"Fn::GetAtt": [
-		    "ControlPlaneAccessRole",
-		    "Arn"
-		]
-	    }
-	},
-	"RootBucketName": {
-	    "Description": "The name of the S3 root bucket",
-	    "Value": {
-		"Ref": "rootS3Bucket"
-	    }
-	},
-	"VPCId": {
-	    "Description": "The ID of the VPC",
-	    "Value": {
-		"Ref": "VPC"
-	    }
-	},
-	"AccessDataBucketsInstanceProfileARN": {
-	    "Description": "Instance profile ARN to attach to Databricks cluster so it can access your S3 data buckets",
-	    "Value": {
-		"Fn::GetAtt": [
-		    "s3DataBucketsAccessRoleInstanceProfile",
-		    "Arn"
-		]
-	    }
-	}
+        "ControlPlaneRoleARN": {
+            "Description": "The ARN of the cross account role for the Databricks Control Plane",
+            "Value": {
+                "Fn::GetAtt": [
+                    "ControlPlaneAccessRole",
+                    "Arn"
+                ]
+            }
+        },
+        "RootBucketName": {
+            "Description": "The name of the S3 root bucket",
+            "Value": {
+                "Ref": "rootS3Bucket"
+            }
+        },
+        "VPCId": {
+            "Description": "The ID of the VPC",
+            "Value": {
+                "Ref": "VPC"
+            }
+        },
+        "AccessDataBucketsInstanceProfileARN": {
+            "Description": "Instance profile ARN to attach to Databricks cluster so it can access your S3 data buckets",
+            "Value": {
+                "Fn::GetAtt": [
+                    "s3DataBucketsAccessRoleInstanceProfile",
+                    "Arn"
+                ]
+            }
+        }
     }
 }
