@@ -9,6 +9,25 @@
             "Default": "databricks-e2-vpc"
         }
     },
+
+    "Conditions" : {
+        "Has3Subnets" : { "Fn::Not"    : [
+                                           { "Fn::Equals" : [ {"Ref":"AWS::Region"}, "us-west-1" ] }
+                                         ]
+                        },
+        "Has4Subnets" : { "Fn::Or"     : [
+                                           { "Fn::Equals" : [ {"Ref":"AWS::Region"}, "ap-northeast-2"  ] },
+                                           { "Fn::Equals" : [ {"Ref":"AWS::Region"}, "us-west-2"       ] },
+                                           { "Fn::Equals" : [ {"Ref":"AWS::Region"}, "us-east-1"       ] }
+                                         ]
+                        },
+        "Has5Subnets" : {
+                                             "Fn::Equals" : [ {"Ref":"AWS::Region"}, "us-east-1"       ]
+                        },
+        "Has6Subnets" : {
+                                             "Fn::Equals" : [ {"Ref":"AWS::Region"}, "us-east-1"       ]
+                        }
+   },
     
     "Resources": {
         "VPC": {
@@ -50,6 +69,7 @@
         },
         "SubnetC": {
             "Type": "AWS::EC2::Subnet",
+            "Condition" : "Has3Subnets",
             "Properties": {
                 "Tags" : [ { "Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}-${az}", { "basename" : { "Ref" : "basename" }, "az" : { "Fn::Select": [ 2, { "Fn::GetAZs": "" } ] } } ] } } ],
                 "AvailabilityZone" : { "Fn::Select": [ 2, { "Fn::GetAZs": "" } ] },
@@ -59,6 +79,7 @@
         },
         "SubnetD": {
             "Type": "AWS::EC2::Subnet",
+            "Condition" : "Has4Subnets",
             "Properties": {
                 "Tags" : [ { "Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}-${az}", { "basename" : { "Ref" : "basename" }, "az" : { "Fn::Select": [ 3, { "Fn::GetAZs": "" } ] } } ] } } ],
                 "AvailabilityZone" : { "Fn::Select": [ 3, { "Fn::GetAZs": "" } ] },
@@ -68,6 +89,7 @@
         },
         "SubnetE": {
             "Type": "AWS::EC2::Subnet",
+            "Condition" : "Has5Subnets",
             "Properties": {
                 "Tags" : [ { "Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}-${az}", { "basename" : { "Ref" : "basename" }, "az" : { "Fn::Select": [ 4, { "Fn::GetAZs": "" } ] } } ] } } ],
                 "AvailabilityZone" : { "Fn::Select": [ 4, { "Fn::GetAZs": "" } ] },
@@ -77,6 +99,7 @@
         },
         "SubnetF": {
             "Type": "AWS::EC2::Subnet",
+            "Condition" : "Has6Subnets",
             "Properties": {
                 "Tags" : [ { "Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}-${az}", { "basename" : { "Ref" : "basename" }, "az" : { "Fn::Select": [ 5, { "Fn::GetAZs": "" } ] } } ] } } ],
                 "AvailabilityZone" : { "Fn::Select": [ 5, { "Fn::GetAZs": "" } ] },
@@ -169,6 +192,7 @@
         },
         "SubnetRouteTableAssociationC" : {
             "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Condition" : "Has3Subnets",
             "Properties" : {
                 "SubnetId" : { "Ref" : "SubnetC" },
                 "RouteTableId" : { "Ref" : "RouteTablePrivate" }
@@ -176,6 +200,7 @@
         },
         "SubnetRouteTableAssociationD" : {
             "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Condition" : "Has4Subnets",
             "Properties" : {
                 "SubnetId" : { "Ref" : "SubnetD" },
                 "RouteTableId" : { "Ref" : "RouteTablePrivate" }
@@ -183,6 +208,7 @@
         },
         "SubnetRouteTableAssociationE" : {
             "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Condition" : "Has5Subnets",
             "Properties" : {
                 "SubnetId" : { "Ref" : "SubnetE" },
                 "RouteTableId" : { "Ref" : "RouteTablePrivate" }
@@ -190,6 +216,7 @@
         },
         "SubnetRouteTableAssociationF" : {
             "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Condition" : "Has6Subnets",
             "Properties" : {
                 "SubnetId" : { "Ref" : "SubnetF" },
                 "RouteTableId" : { "Ref" : "RouteTablePrivate" }
@@ -249,6 +276,7 @@
         },
         "SubnetNetworkAclC" : {
             "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+            "Condition" : "Has3Subnets",
             "Properties" : {
                 "NetworkAclId" : { "Ref" : "NetworkAcl"},
                 "SubnetId" : { "Ref" : "SubnetC"}
@@ -256,6 +284,7 @@
         },
         "SubnetNetworkAclD" : {
             "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+            "Condition" : "Has4Subnets",
             "Properties" : {
                 "NetworkAclId" : { "Ref" : "NetworkAcl"},
                 "SubnetId" : { "Ref" : "SubnetD"}
@@ -263,6 +292,7 @@
         },
         "SubnetNetworkAclE" : {
             "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+            "Condition" : "Has5Subnets",
             "Properties" : {
                 "NetworkAclId" : { "Ref" : "NetworkAcl"},
                 "SubnetId" : { "Ref" : "SubnetE"}
@@ -270,6 +300,7 @@
         },
         "SubnetNetworkAclF" : {
             "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+            "Condition" : "Has6Subnets",
             "Properties" : {
                 "NetworkAclId" : { "Ref" : "NetworkAcl"},
                 "SubnetId" : { "Ref" : "SubnetF"}
