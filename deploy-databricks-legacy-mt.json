@@ -39,7 +39,13 @@
             "Type": "AWS::S3::Bucket",
             "Properties": {
                 "BucketName": {
-                    "Fn::Sub": "databricks-root-${AWS::AccountId}"
+                    "Fn::Join": [
+                        "-",
+                        [
+                            "databricks-root",
+                            { "Fn::Select": [ 0, { "Fn::Split": [ "-", { "Fn::Select": [ 2, { "Fn::Split" : [ "/" , { "Ref": "AWS::StackId" } ] } ] } ] } ] }
+                        ]
+                    ]
                 },
                 "PublicAccessBlockConfiguration": {
                     "BlockPublicAcls": true,
