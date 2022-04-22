@@ -163,6 +163,24 @@
                             "Action": [
                                 "sts:AssumeRole"
                             ]
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": [
+                                    "arn:aws:iam::790110701330:role/serverless-customer-resource-role"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ],
+                            "Condition": {
+                                "StringLike": {
+                                    "sts:ExternalId": [
+                                        "databricks-serverless-*"
+                                    ]
+                                }
+                            }
                         }
                     ]
                 },
@@ -1133,14 +1151,14 @@
                 ]
             }
         },
-	
+        
         "RootBucketName": {
             "Description": "The name of the S3 root bucket",
             "Value": {
                 "Ref": "rootS3Bucket"
             }
         },
-	
+        
         "VPCId"          : { "Description": "VPC ID"           , "Value": { "Ref": "VPC"           }                             },
         "SubnetAId"      : { "Description": "Subnet A ID"      , "Value": { "Ref": "SubnetA"       }                             },
         "SubnetBId"      : { "Description": "Subnet B ID"      , "Value": { "Ref": "SubnetB"       }                             },
@@ -1149,8 +1167,8 @@
         "SubnetEId"      : { "Description": "Subnet E ID"      , "Value": { "Ref": "SubnetE"       }, "Condition": "Has5Subnets" },
         "SubnetFId"      : { "Description": "Subnet F ID"      , "Value": { "Ref": "SubnetF"       }, "Condition": "Has6Subnets" },
 
-	"SecurityGroupId": { "Description": "Security Group ID", "Value": { "Ref": "SecurityGroup" }                             },
-	
+        "SecurityGroupId": { "Description": "Security Group ID", "Value": { "Ref": "SecurityGroup" }                             },
+        
         "AccessDataBucketsInstanceProfileARN": {
             "Description": "Instance profile ARN to attach to Databricks cluster so it can access your S3 data buckets",
             "Value": {
