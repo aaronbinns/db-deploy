@@ -42,7 +42,8 @@
                     "Fn::Join": [
                         "-",
                         [
-                            "databricks-root",
+                            { "Ref": "AWS::StackName" },
+                            "root-bucket",
                             { "Fn::Select": [ 0, { "Fn::Split": [ "-", { "Fn::Select": [ 2, { "Fn::Split" : [ "/" , { "Ref": "AWS::StackId" } ] } ] } ] } ] }
                         ]
                     ]
@@ -98,7 +99,15 @@
         "s3DataBucketsAccessRole": {
             "Type": "AWS::IAM::Role",
             "Properties": {
-                "RoleName": "databricks-access-data-buckets",
+                "RoleName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            { "Ref": "AWS::StackName" },
+                            "access-data-buckets"
+                        ]
+                    ]
+                },
 		"AssumeRolePolicyDocument": {
                     "Statement": [
                         {
@@ -117,7 +126,15 @@
                 "Path": "/",
                 "Policies": [
                     {
-                        "PolicyName": "databricks-access-data-buckets",
+                        "PolicyName": {
+                            "Fn::Join": [
+                                "-",
+                                [
+                                    { "Ref": "AWS::StackName" },
+                                    "access-data-buckets"
+                                ]
+                            ]
+                        },
                         "PolicyDocument": {
                             "Statement": [
                                 {
@@ -140,7 +157,15 @@
         "s3DataBucketsAccessRoleInstanceProfile": {
             "Type": "AWS::IAM::InstanceProfile",
             "Properties": {
-                "InstanceProfileName": "databricks-access-data-buckets",
+                "InstanceProfileName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            { "Ref": "AWS::StackName" },
+                            "access-data-buckets"
+                        ]
+                    ]
+                },
                 "Path": "/",
                 "Roles": [
                     {
@@ -153,7 +178,15 @@
         "ControlPlaneAccessRole": {
             "Type": "AWS::IAM::Role",
             "Properties": {
-                "RoleName": "databricks-control-plane",
+                "RoleName": {
+                    "Fn::Join": [
+                        "-",
+                        [
+                            { "Ref": "AWS::StackName" },
+                            "control-plane"
+                        ]
+                    ]
+		},
                 "AssumeRolePolicyDocument": {
                     "Statement": [
                         {
@@ -271,7 +304,14 @@
                             ],
                             "Version": "2012-10-17"
                         },
-                        "PolicyName": "databricks-control-plane-access"
+                        "PolicyName": {
+			    "Fn::Join": [ "-",
+					  [
+					      { "Ref": "AWS::StackName" },
+					      "control-plane"
+					  ]
+					]
+                        }
                     }
                 ]
             }
@@ -280,7 +320,16 @@
         "ControlPlaneAccessRoleInstanceProfile": {
             "Type": "AWS::IAM::InstanceProfile",
             "Properties": {
-                "InstanceProfileName": "databricks-control-plane-access",
+                "InstanceProfileName": {
+                    "Fn::Join":
+                    [
+                        "-",
+                        [
+                            { "Ref": "AWS::StackName" },
+                            "control-plane"
+                        ]
+                    ]
+                },
                 "Path": "/",
                 "Roles": [
                     {
