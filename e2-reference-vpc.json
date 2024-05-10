@@ -346,13 +346,47 @@
         },
         
         "VPCEndpointS3": {
-            "Type" : "AWS::EC2::VPCEndpoint",
-            "Properties" : {
-                "RouteTableIds" : [ { "Ref" : "RouteTablePrivate" } ],
-                "ServiceName" : { "Fn::Sub": "com.amazonaws.${AWS::Region}.s3" },
-                "VpcId" : { "Ref": "VPC" }
+            "Type": "AWS::EC2::VPCEndpoint",
+            "Properties": {
+                "ServiceName": { "Fn::Sub": "com.amazonaws.${AWS::Region}.s3" },
+		"VpcEndpointType": "Gateway",
+                "VpcId": { "Ref": "VPC" },
+                "RouteTableIds": [ { "Ref": "RouteTablePrivate" } ]
+            }
+        },
+        "VPCEndpointSTS": {
+            "Type": "AWS::EC2::VPCEndpoint",
+            "Properties": {
+                "ServiceName": { "Fn::Sub": "com.amazonaws.${AWS::Region}.sts" },
+		"VpcEndpointType": "Interface",
+                "VpcId": { "Ref": "VPC" },
+                "SecurityGroupIds": [ { "Ref": "SecurityGroup" } ],
+		"SubnetIds": [
+ 		    { "Ref" : "SubnetA" },
+ 		    { "Ref" : "SubnetB" },
+		    { "Fn::If": [ "Has3Subnets", { "Ref" : "SubnetC" },	{ "Ref" : "AWS::NoValue" } ] },
+		    { "Fn::If": [ "Has4Subnets", { "Ref" : "SubnetD" },	{ "Ref" : "AWS::NoValue" } ] },
+		    { "Fn::If": [ "Has5Subnets", { "Ref" : "SubnetE" },	{ "Ref" : "AWS::NoValue" } ] },
+		    { "Fn::If": [ "Has6Subnets", { "Ref" : "SubnetF" },	{ "Ref" : "AWS::NoValue" } ] }
+		]
+            }
+        },
+        "VPCEndpointKinesisStreams": {
+            "Type": "AWS::EC2::VPCEndpoint",
+            "Properties": {
+                "ServiceName": { "Fn::Sub": "com.amazonaws.${AWS::Region}.kinesis-streams" },
+		"VpcEndpointType": "Interface",
+                "VpcId": { "Ref": "VPC" },
+                "SecurityGroupIds": [ { "Ref": "SecurityGroup" } ],
+		"SubnetIds": [
+ 		    { "Ref" : "SubnetA" },
+ 		    { "Ref" : "SubnetB" },
+		    { "Fn::If": [ "Has3Subnets", { "Ref" : "SubnetC" },	{ "Ref" : "AWS::NoValue" } ] },
+		    { "Fn::If": [ "Has4Subnets", { "Ref" : "SubnetD" },	{ "Ref" : "AWS::NoValue" } ] },
+		    { "Fn::If": [ "Has5Subnets", { "Ref" : "SubnetE" },	{ "Ref" : "AWS::NoValue" } ] },
+		    { "Fn::If": [ "Has6Subnets", { "Ref" : "SubnetF" },	{ "Ref" : "AWS::NoValue" } ] }
+		]
             }
         }
-
     }
 }
