@@ -1,0 +1,392 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+
+    "Parameters" : {
+        "basename": {
+            "Description": "Base name for all resources, e.g. \"databricks-e2-vpc\"",
+            "Type": "String",
+            "MinLength": 1,
+            "Default": "databricks-e2-vpc"
+        }
+    },
+
+    "Conditions" : {
+        "Has3Subnets" : { "Fn::Not"    : [
+                                           { "Fn::Equals" : [ {"Ref":"AWS::Region"}, "us-west-1" ] }
+                                         ]
+                        },
+        "Has4Subnets" : { "Fn::Or"     : [
+                                           { "Fn::Equals" : [ {"Ref":"AWS::Region"}, "ap-northeast-2"  ] },
+                                           { "Fn::Equals" : [ {"Ref":"AWS::Region"}, "us-west-2"       ] },
+                                           { "Fn::Equals" : [ {"Ref":"AWS::Region"}, "us-east-1"       ] }
+                                         ]
+                        },
+        "Has5Subnets" : {
+                                             "Fn::Equals" : [ {"Ref":"AWS::Region"}, "us-east-1"       ]
+                        },
+        "Has6Subnets" : {
+                                             "Fn::Equals" : [ {"Ref":"AWS::Region"}, "us-east-1"       ]
+                        }
+   },
+    
+    "Resources": {
+        "VPC": {
+            "Type": "AWS::EC2::VPC",
+            "Properties": {
+                "Tags" : [ {"Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}", { "basename" : { "Ref" : "basename" } } ] } } ],
+                "CidrBlock" : "10.0.0.0/16",
+                "EnableDnsHostnames" : true,
+                "EnableDnsSupport" : true
+            }
+        },
+
+
+        "SubnetNAT": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "Tags" : [ {"Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}-nat", { "basename" : { "Ref" : "basename" } } ] } } ],
+                "CidrBlock" : "10.0.224.0/19",
+                "VpcId": { "Ref": "VPC" }
+            }
+        },
+        "SubnetA": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "Tags" : [ { "Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}-${az}", { "basename" : { "Ref" : "basename" }, "az" : { "Fn::Select": [ 0, { "Fn::GetAZs": "" } ] } } ] } } ],
+                "AvailabilityZone" : { "Fn::Select": [ 0, { "Fn::GetAZs": "" } ] },
+                "CidrBlock" : "10.0.0.0/19",
+                "VpcId": { "Ref": "VPC" }
+            }
+        },
+        "SubnetB": {
+            "Type": "AWS::EC2::Subnet",
+            "Properties": {
+                "Tags" : [ { "Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}-${az}", { "basename" : { "Ref" : "basename" }, "az" : { "Fn::Select": [ 1, { "Fn::GetAZs": "" } ] } } ] } } ],
+                "AvailabilityZone" : { "Fn::Select": [ 1, { "Fn::GetAZs": "" } ] },
+                "CidrBlock" : "10.0.32.0/19",
+                "VpcId": { "Ref": "VPC" }
+            }
+        },
+        "SubnetC": {
+            "Type": "AWS::EC2::Subnet",
+            "Condition" : "Has3Subnets",
+            "Properties": {
+                "Tags" : [ { "Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}-${az}", { "basename" : { "Ref" : "basename" }, "az" : { "Fn::Select": [ 2, { "Fn::GetAZs": "" } ] } } ] } } ],
+                "AvailabilityZone" : { "Fn::Select": [ 2, { "Fn::GetAZs": "" } ] },
+                "CidrBlock" : "10.0.64.0/19",
+                "VpcId": { "Ref": "VPC" }
+            }
+        },
+        "SubnetD": {
+            "Type": "AWS::EC2::Subnet",
+            "Condition" : "Has4Subnets",
+            "Properties": {
+                "Tags" : [ { "Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}-${az}", { "basename" : { "Ref" : "basename" }, "az" : { "Fn::Select": [ 3, { "Fn::GetAZs": "" } ] } } ] } } ],
+                "AvailabilityZone" : { "Fn::Select": [ 3, { "Fn::GetAZs": "" } ] },
+                "CidrBlock" : "10.0.96.0/19",
+                "VpcId": { "Ref": "VPC" }
+            }
+        },
+        "SubnetE": {
+            "Type": "AWS::EC2::Subnet",
+            "Condition" : "Has5Subnets",
+            "Properties": {
+                "Tags" : [ { "Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}-${az}", { "basename" : { "Ref" : "basename" }, "az" : { "Fn::Select": [ 4, { "Fn::GetAZs": "" } ] } } ] } } ],
+                "AvailabilityZone" : { "Fn::Select": [ 4, { "Fn::GetAZs": "" } ] },
+                "CidrBlock" : "10.0.128.0/19",
+                "VpcId": { "Ref": "VPC" }
+            }
+        },
+        "SubnetF": {
+            "Type": "AWS::EC2::Subnet",
+            "Condition" : "Has6Subnets",
+            "Properties": {
+                "Tags" : [ { "Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}-${az}", { "basename" : { "Ref" : "basename" }, "az" : { "Fn::Select": [ 5, { "Fn::GetAZs": "" } ] } } ] } } ],
+                "AvailabilityZone" : { "Fn::Select": [ 5, { "Fn::GetAZs": "" } ] },
+                "CidrBlock" : "10.0.160.0/19",
+                "VpcId": { "Ref": "VPC" }
+            }
+        },
+
+        "IGW": {
+            "Type": "AWS::EC2::InternetGateway",
+            "Properties": {
+                "Tags" : [ {"Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}", { "basename" : { "Ref" : "basename" } } ] } } ]
+            }
+        },
+        "VPCGatewayAttachment": {
+            "Type" : "AWS::EC2::VPCGatewayAttachment",
+            "Properties" : {
+                "InternetGatewayId" : { "Ref" : "IGW" },
+                "VpcId" : { "Ref" : "VPC" }
+            }
+        },
+
+        "EIP": {
+            "Type" : "AWS::EC2::EIP",
+            "Properties" : {
+                "Domain" : "vpc",
+                "Tags" : [ {"Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}", { "basename" : { "Ref" : "basename" } } ] } } ]
+            }
+        },
+
+        "NATGateway": {
+            "Type": "AWS::EC2::NatGateway",
+            "Properties": {
+                "Tags" : [ {"Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}", { "basename" : { "Ref" : "basename" } } ] } } ],
+                "AllocationId" : { "Fn::GetAtt" : ["EIP", "AllocationId"] },
+                "SubnetId" : { "Ref" : "SubnetNAT"}
+            }
+        },
+        "RouteTableNAT": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "Tags" : [ {"Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}-public", { "basename" : { "Ref" : "basename" } } ] } } ],
+                "VpcId": { "Ref": "VPC" }
+            }
+        },
+        "RouteNAT": {
+            "Type" : "AWS::EC2::Route",
+            "Properties" : {
+                "DestinationCidrBlock" : "0.0.0.0/0",
+                "GatewayId" : { "Ref": "IGW" },
+                "RouteTableId" : { "Ref": "RouteTableNAT" }
+            }
+        },
+        "SubnetRouteTableAssociationNAT" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "SubnetNAT" },
+                "RouteTableId" : { "Ref" : "RouteTableNAT" }
+            }
+        },
+
+        "RouteTablePrivate": {
+            "Type": "AWS::EC2::RouteTable",
+            "Properties": {
+                "Tags" : [ {"Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}-private", { "basename" : { "Ref" : "basename" } } ] } } ],
+                "VpcId": { "Ref": "VPC" }
+            }
+        },      
+        "RoutePrivate": {
+            "Type" : "AWS::EC2::Route",
+            "Properties" : {
+                "DestinationCidrBlock" : "0.0.0.0/0",
+                "NatGatewayId" : { "Ref": "NATGateway" },
+                "RouteTableId" : { "Ref": "RouteTablePrivate" }
+            }
+        },
+        "SubnetRouteTableAssociationA" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "SubnetA" },
+                "RouteTableId" : { "Ref" : "RouteTablePrivate" }
+            }
+        },
+        "SubnetRouteTableAssociationB" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "SubnetB" },
+                "RouteTableId" : { "Ref" : "RouteTablePrivate" }
+            }
+        },
+        "SubnetRouteTableAssociationC" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Condition" : "Has3Subnets",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "SubnetC" },
+                "RouteTableId" : { "Ref" : "RouteTablePrivate" }
+            }
+        },
+        "SubnetRouteTableAssociationD" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Condition" : "Has4Subnets",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "SubnetD" },
+                "RouteTableId" : { "Ref" : "RouteTablePrivate" }
+            }
+        },
+        "SubnetRouteTableAssociationE" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Condition" : "Has5Subnets",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "SubnetE" },
+                "RouteTableId" : { "Ref" : "RouteTablePrivate" }
+            }
+        },
+        "SubnetRouteTableAssociationF" : {
+            "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+            "Condition" : "Has6Subnets",
+            "Properties" : {
+                "SubnetId" : { "Ref" : "SubnetF" },
+                "RouteTableId" : { "Ref" : "RouteTablePrivate" }
+            }
+        },
+
+        "NetworkAcl": {
+            "Type": "AWS::EC2::NetworkAcl",
+            "Properties": {
+                "Tags" : [ {"Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}", { "basename" : { "Ref" : "basename" } } ] } } ],
+                "VpcId" : { "Ref" : "VPC" }
+            }
+        },
+        "NetworkAclEntryInboundAllow": {
+            "Type": "AWS::EC2::NetworkAclEntry",
+            "Properties": {
+                "Egress"    : false,
+                "CidrBlock" : "0.0.0.0/0",
+                "Protocol"  : -1,
+                "RuleNumber": 100,
+                "RuleAction": "ALLOW",
+                "NetworkAclId" : { "Ref" : "NetworkAcl" }
+            }
+        },
+        "NetworkAclEntryOutboundAllow": {
+            "Type": "AWS::EC2::NetworkAclEntry",
+            "Properties": {
+                "Egress"    : true,
+                "CidrBlock" : "0.0.0.0/0",
+                "Protocol"  : -1,
+                "RuleNumber": 100,
+                "RuleAction": "ALLOW",
+                "NetworkAclId" : { "Ref" : "NetworkAcl" }
+            }
+        },
+
+        "SubnetNetworkAclNAT" : {
+            "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+            "Properties" : {
+                "NetworkAclId" : { "Ref" : "NetworkAcl"},
+                "SubnetId" : { "Ref" : "SubnetNAT"}
+            }
+        },
+        "SubnetNetworkAclA" : {
+            "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+            "Properties" : {
+                "NetworkAclId" : { "Ref" : "NetworkAcl"},
+                "SubnetId" : { "Ref" : "SubnetA"}
+            }
+        },
+        "SubnetNetworkAclB" : {
+            "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+            "Properties" : {
+                "NetworkAclId" : { "Ref" : "NetworkAcl"},
+                "SubnetId" : { "Ref" : "SubnetB"}
+            }
+        },
+        "SubnetNetworkAclC" : {
+            "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+            "Condition" : "Has3Subnets",
+            "Properties" : {
+                "NetworkAclId" : { "Ref" : "NetworkAcl"},
+                "SubnetId" : { "Ref" : "SubnetC"}
+            }
+        },
+        "SubnetNetworkAclD" : {
+            "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+            "Condition" : "Has4Subnets",
+            "Properties" : {
+                "NetworkAclId" : { "Ref" : "NetworkAcl"},
+                "SubnetId" : { "Ref" : "SubnetD"}
+            }
+        },
+        "SubnetNetworkAclE" : {
+            "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+            "Condition" : "Has5Subnets",
+            "Properties" : {
+                "NetworkAclId" : { "Ref" : "NetworkAcl"},
+                "SubnetId" : { "Ref" : "SubnetE"}
+            }
+        },
+        "SubnetNetworkAclF" : {
+            "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+            "Condition" : "Has6Subnets",
+            "Properties" : {
+                "NetworkAclId" : { "Ref" : "NetworkAcl"},
+                "SubnetId" : { "Ref" : "SubnetF"}
+            }
+        },
+
+        "SecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "Tags" : [ {"Key" : "Name", "Value" : { "Fn::Sub": [ "${basename}", { "basename" : { "Ref" : "basename" } } ] } } ],
+                "GroupDescription" : "Databricks security group",
+                "GroupName" : "databricks",
+                "VpcId" : { "Ref" : "VPC" }
+            }
+        },
+        "SecurityGroupIngressTcp" : {
+            "Type" : "AWS::EC2::SecurityGroupIngress",
+            "Properties" : {
+                "GroupId" : { "Ref" : "SecurityGroup" },
+                "SourceSecurityGroupId" : { "Ref" : "SecurityGroup" },
+                "IpProtocol" : "tcp",
+                "FromPort" : 0,
+                "ToPort" : 65535
+            }
+        },
+        "SecurityGroupIngressUdp": {
+            "Type" : "AWS::EC2::SecurityGroupIngress",
+            "Properties" : {
+                "GroupId" : { "Ref" : "SecurityGroup" },
+                "SourceSecurityGroupId" : { "Ref" : "SecurityGroup" },
+                "IpProtocol" : "udp",
+                "FromPort" : 0,
+                "ToPort" : 65535
+            }
+        },
+        "SecurityGroupEgressAll": {
+            "Type" : "AWS::EC2::SecurityGroupEgress",
+            "Properties" : {
+                "GroupId" : { "Ref" : "SecurityGroup" },
+                "CidrIp" : "0.0.0.0/0",
+                "IpProtocol" : "-1"
+            }
+        },
+        
+        "VPCEndpointS3": {
+            "Type": "AWS::EC2::VPCEndpoint",
+            "Properties": {
+                "ServiceName": { "Fn::Sub": "com.amazonaws.${AWS::Region}.s3" },
+		"VpcEndpointType": "Gateway",
+                "VpcId": { "Ref": "VPC" },
+                "RouteTableIds": [ { "Ref": "RouteTablePrivate" } ]
+            }
+        },
+        "VPCEndpointSTS": {
+            "Type": "AWS::EC2::VPCEndpoint",
+            "Properties": {
+                "ServiceName": { "Fn::Sub": "com.amazonaws.${AWS::Region}.sts" },
+		"VpcEndpointType": "Interface",
+                "VpcId": { "Ref": "VPC" },
+                "SecurityGroupIds": [ { "Ref": "SecurityGroup" } ],
+		"SubnetIds": [
+ 		    { "Ref" : "SubnetA" },
+ 		    { "Ref" : "SubnetB" },
+		    { "Fn::If": [ "Has3Subnets", { "Ref" : "SubnetC" },	{ "Ref" : "AWS::NoValue" } ] },
+		    { "Fn::If": [ "Has4Subnets", { "Ref" : "SubnetD" },	{ "Ref" : "AWS::NoValue" } ] },
+		    { "Fn::If": [ "Has5Subnets", { "Ref" : "SubnetE" },	{ "Ref" : "AWS::NoValue" } ] },
+		    { "Fn::If": [ "Has6Subnets", { "Ref" : "SubnetF" },	{ "Ref" : "AWS::NoValue" } ] }
+		]
+            }
+        },
+        "VPCEndpointKinesisStreams": {
+            "Type": "AWS::EC2::VPCEndpoint",
+            "Properties": {
+                "ServiceName": { "Fn::Sub": "com.amazonaws.${AWS::Region}.kinesis-streams" },
+		"VpcEndpointType": "Interface",
+                "VpcId": { "Ref": "VPC" },
+                "SecurityGroupIds": [ { "Ref": "SecurityGroup" } ],
+		"SubnetIds": [
+ 		    { "Ref" : "SubnetA" },
+ 		    { "Ref" : "SubnetB" },
+		    { "Fn::If": [ "Has3Subnets", { "Ref" : "SubnetC" },	{ "Ref" : "AWS::NoValue" } ] },
+		    { "Fn::If": [ "Has4Subnets", { "Ref" : "SubnetD" },	{ "Ref" : "AWS::NoValue" } ] },
+		    { "Fn::If": [ "Has5Subnets", { "Ref" : "SubnetE" },	{ "Ref" : "AWS::NoValue" } ] },
+		    { "Fn::If": [ "Has6Subnets", { "Ref" : "SubnetF" },	{ "Ref" : "AWS::NoValue" } ] }
+		]
+            }
+        }
+    }
+}
