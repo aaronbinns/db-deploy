@@ -212,7 +212,7 @@
 				    { "Fn::Join": [ "", [ "arn:aws:iam::", { "Ref": "AWS::AccountId" }, ":root" ] ] }
 				]
 			    },
-                            "Condition": { "StringEquals": { "AWS:PrincpalArn":
+                            "Condition": { "StringEquals": { "AWS:PrincipalArn":
 							     { "Fn::Join": [ "", [ "arn:aws:iam::", { "Ref": "AWS::AccountId" }, ":role/",
 										   { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, "unity-catalog-storage-role" ] ] }
 										 ]
