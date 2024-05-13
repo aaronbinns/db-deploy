@@ -23,7 +23,10 @@
         },
         "Has6Subnets": {
             "Fn::Equals": [ { "Ref": "AWS::Region" }, "us-east-1" ]
-        }
+        },
+	"DoKinesisVPCEntpoint": {
+	    "Fn::Not": [ { "Fn::Equals": [ { "Ref": "AWS::Region" }, "us-west-2" ] } ]
+	}
     },
     "Resources": {
         "WorkspaceStorage": {
@@ -49,7 +52,7 @@
                     "Version": "2012-10-17",
                     "Statement": [
                         {
-                            "Sid": "Grant Databricks Access",
+                            "Sid": "Databricks control plane access to workspace storage",
                             "Effect": "Allow",
                             "Principal": { "AWS": "arn:aws:iam::414351767826:root" },
                             "Action": [
@@ -67,13 +70,13 @@
 			    "Condition": { "StringEquals": { "aws:PrincipalTag/DatabricksAccountId": { "Ref": "ExternalID" } } }
                         },
 			{
-			    "Sid": "Prevent DBFS from accessing Unity Catalog metastore",
+			    "Sid": "Prevent Databricks control plane from accessing Unity Catalog storage",
 			    "Effect": "Deny",
 			    "Principal": { "AWS": "arn:aws:iam::414351767826:root" },
 			    "Action": "s3:*",
 			    "Resource": [
-                                { "Fn::Sub": "arn:aws:s3:::${WorkspaceStorage}/unity-catalog/*" },
-                                { "Fn::Sub": "arn:aws:s3:::${WorkspaceStorage}/unity-catalog"   }
+                                { "Fn::Sub": "arn:aws:s3:::${WorkspaceStorage}/__unitystorage/*" },
+                                { "Fn::Sub": "arn:aws:s3:::${WorkspaceStorage}/__unitystorage"   }
 			    ]
 			}
                     ]
@@ -606,6 +609,7 @@
             }
         },
         "VPCEndpointKinesisStreams": {
+	    "Condition": "DoKinesisVPCEntpoint",
             "Type": "AWS::EC2::VPCEndpoint",
             "Properties": {
                 "ServiceName": { "Fn::Sub": "com.amazonaws.${AWS::Region}.kinesis-streams" },
@@ -636,7 +640,7 @@
 
 	"UnityCatalogStorageCredentialRole": {
 	    "Description": "ARN to use for Unity Catalog storage credential",
-	    "Value": { "Ref": "UnityCatalogStorageCredentialRole" }
+	    "Value": { "Fn::GetAtt": [ "UnityCatalogStorageCredentialRole", "Arn" ] }
 	},
         
         "VPCId"          : { "Description": "VPC ID"           , "Value": { "Ref": "VPC"           }                             },
