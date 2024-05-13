@@ -3,7 +3,7 @@
 
     "Parameters" : {
         "basename": {
-            "Description": "Base name for all resources, e.g. \"databricks-e2-vpc\"",
+            "Description": "Base name for all resources, e.g. \"databricks-vpc\"",
             "Type": "String",
             "MinLength": 1,
             "Default": "databricks-e2-vpc"
@@ -26,8 +26,11 @@
                         },
         "Has6Subnets" : {
                                              "Fn::Equals" : [ {"Ref":"AWS::Region"}, "us-east-1"       ]
-                        }
-   },
+                        },
+	"DoKinesisVPCEntpoint": {
+	    "Fn::Not": [ { "Fn::Equals": [ { "Ref": "AWS::Region" }, "us-west-2" ] } ]
+	}
+    },
     
     "Resources": {
         "VPC": {
@@ -372,6 +375,7 @@
             }
         },
         "VPCEndpointKinesisStreams": {
+	    "Condition": "DoKinesisVPCEntpoint",
             "Type": "AWS::EC2::VPCEndpoint",
             "Properties": {
                 "ServiceName": { "Fn::Sub": "com.amazonaws.${AWS::Region}.kinesis-streams" },
