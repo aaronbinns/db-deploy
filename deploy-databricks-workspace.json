@@ -24,7 +24,7 @@
         "Has6Subnets": {
             "Fn::Equals": [ { "Ref": "AWS::Region" }, "us-east-1" ]
         },
-	"DoKinesisVPCEntpoint": {
+	"DoKinesisVPCEndpoint": {
 	    "Fn::Not": [ { "Fn::Equals": [ { "Ref": "AWS::Region" }, "us-west-2" ] } ]
 	}
     },
@@ -609,7 +609,7 @@
             }
         },
         "VPCEndpointKinesisStreams": {
-	    "Condition": "DoKinesisVPCEntpoint",
+	    "Condition": "DoKinesisVPCEndpoint",
             "Type": "AWS::EC2::VPCEndpoint",
             "Properties": {
                 "ServiceName": { "Fn::Sub": "com.amazonaws.${AWS::Region}.kinesis-streams" },
